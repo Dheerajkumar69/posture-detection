@@ -1,21 +1,24 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Camera, XCircle } from 'lucide-react';
+import { Camera, XCircle, Repeat } from 'lucide-react';
 import CanvasOverlay from './CanvasOverlay';
 import { usePoseEstimation } from '../hooks/usePoseEstimation';
 import { PostureMode } from '../App';
+import PostureDemoGuide from './PostureDemoGuide';
 
 interface LivePoseDetectorProps {
   mode: PostureMode;
   onClose: () => void;
 }
 
-const LivePoseDetector: React.FC<LivePoseDetectorProps> = ({ mode, onClose }) => {
+const LivePoseDetector: React.FC<LivePoseDetectorProps> = ({ mode: initialMode, onClose }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoReady, setVideoReady] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showFps, setShowFps] = useState(false);
   const [fps, setFps] = useState(0);
+  const [showGuide, setShowGuide] = useState(true);
+  const [mode, setMode] = useState<PostureMode>(initialMode);
   
   const {
     results,
@@ -76,6 +79,14 @@ const LivePoseDetector: React.FC<LivePoseDetectorProps> = ({ mode, onClose }) =>
     }
   };
 
+  const toggleGuide = () => {
+    setShowGuide(!showGuide);
+  };
+  
+  const toggleMode = () => {
+    setMode(prevMode => prevMode === 'squat' ? 'desk' : 'squat');
+  };
+
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       {/* Header */}
@@ -83,6 +94,7 @@ const LivePoseDetector: React.FC<LivePoseDetectorProps> = ({ mode, onClose }) =>
         <button
           onClick={onClose}
           className="p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition-colors"
+          title="Close"
         >
           <XCircle className="w-6 h-6" />
         </button>
@@ -97,11 +109,19 @@ const LivePoseDetector: React.FC<LivePoseDetectorProps> = ({ mode, onClose }) =>
             <div className="text-xs text-gray-400">FPS: {fps.toFixed(1)}</div>
           )}
         </div>
-        <div className="w-10"></div> {/* Spacer for centering */}
+        <button
+          onClick={toggleMode}
+          className={`p-2 bg-${modeColor === 'blue' ? 'emerald' : 'blue'}-600 rounded-lg text-white text-xs flex items-center`}
+          title="Switch mode"
+        >
+          <Repeat className="w-4 h-4 mr-1" />
+          <span className="hidden sm:inline">Switch to {mode === 'squat' ? 'Desk' : 'Squat'}</span>
+          <span className="sm:hidden">{mode === 'squat' ? 'Desk' : 'Squat'}</span>
+        </button>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center bg-gray-900">
+      <div className="flex-1 flex items-center justify-center bg-gray-900 relative">
         <div className="relative w-full h-full max-w-2xl max-h-full">
           {error ? (
             <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 text-white p-4 text-center">
@@ -137,13 +157,20 @@ const LivePoseDetector: React.FC<LivePoseDetectorProps> = ({ mode, onClose }) =>
               />
               
               {videoReady && (
-                <CanvasOverlay 
-                  videoRef={videoRef} 
-                  poseResults={results}
-                  postureFeedback={postureFeedback}
-                  mode={mode}
-                  onFpsUpdate={setFps}
-                />
+                <>
+                  <CanvasOverlay 
+                    videoRef={videoRef} 
+                    poseResults={results}
+                    postureFeedback={postureFeedback}
+                    mode={mode}
+                    onFpsUpdate={setFps}
+                  />
+                  <PostureDemoGuide 
+                    mode={mode} 
+                    isExpanded={showGuide}
+                    onToggle={toggleGuide}
+                  />
+                </>
               )}
             </>
           )}
@@ -169,7 +196,14 @@ const LivePoseDetector: React.FC<LivePoseDetectorProps> = ({ mode, onClose }) =>
           </div>
         )}
         
-        <div></div> {/* Empty div for flex spacing */}
+        <button
+          onClick={toggleGuide}
+          className={`px-3 py-1 text-xs rounded-full ${
+            showGuide ? `bg-${modeColor}-600 text-white` : 'bg-gray-700 text-gray-300'
+          }`}
+        >
+          {showGuide ? 'Hide Guide' : 'Show Guide'}
+        </button>
       </div>
     </div>
   );
